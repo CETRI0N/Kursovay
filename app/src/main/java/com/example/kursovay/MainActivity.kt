@@ -3,19 +3,25 @@
 package com.example.kursovay
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
+import androidx.camera.view.video.AudioConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -27,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,8 +51,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.kursovay.ui.them.CameraXGuideTheme
 import kotlinx.coroutines.launch
+import java.io.File
 
 class MainActivity : ComponentActivity() {
+
+    // zapis obekta s kameri
+    private var recording: Recording? = null
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!hasPermiss()) {
@@ -126,15 +139,22 @@ class MainActivity : ComponentActivity() {
                             }
                             IconButton(
                                 onClick = {
-                                    takePhoto(
-                                        controller = controller,
-                                        onPhotoTaken = viewModel::onTakePhoto
-                                    )
+                                    takePhoto(controller = controller, onPhotoTaken = viewModel::onTakePhoto)
                                 }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PhotoCamera,
-                                    contentDescription = "Take photo"
+                                    contentDescription = "Сделать фото"
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    recordVideo(controller = controller,)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Videocam,
+                                    contentDescription = "Сделать видео"
                                 )
                             }
                         }
@@ -149,6 +169,9 @@ class MainActivity : ComponentActivity() {
         controller: LifecycleCameraController,
         onPhotoTaken: (Bitmap) -> Unit
     ) {
+        if(!hasPermiss()){
+            return
+        }
         controller.takePicture(
             ContextCompat.getMainExecutor(applicationContext),
             object : ImageCapture.OnImageCapturedCallback() {
@@ -173,12 +196,45 @@ class MainActivity : ComponentActivity() {
 
                 override fun onError(exception: ImageCaptureException) {
                     super.onError(exception)
-                    Log.e("Camera", "Couldn't take photo: ", exception)
+                    Log.e("Camera", "Фото не сделано: ", exception)
                 }
             }
         )
     }
 
+    @SuppressLint("MissingPermission")
+    private fun recordVideo(controller: LifecycleCameraController) {
+        if (recording != null) {
+            recording?.stop()
+            recording = null
+            return
+        }
+        if(!hasPermiss()){
+            return
+        }
+        val outputFile = File(filesDir, "КОНЧЕНОЕ ВИДЕО СНБ")
+        recording = controller.startRecording( //параметры вывода файла. Конструктор берет файл, который мы хотим сохранить
+            FileOutputOptions.Builder(outputFile).build(),
+            AudioConfig.create(true),
+            ContextCompat.getMainExecutor(applicationContext),
+
+        ) { event ->
+            when (event) {// событие когда видос заканчивается
+                is VideoRecordEvent.Finalize -> {
+                    if (event.hasError()) {
+                        recording?.close()
+                        recording = null
+
+                        Toast.makeText(applicationContext, "Видео не записано", Toast.LENGTH_LONG).show()
+                    }
+                    else {
+                        Toast.makeText(applicationContext, "Записал БЛЯ", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+            }
+        }
+    }
     private fun hasPermiss(): Boolean {
         return CAMERAX_PERMISSIONS.all {
             ContextCompat.checkSelfPermission(

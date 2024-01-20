@@ -11,7 +11,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 @Composable
 fun CameraPreview(controller: LifecycleCameraController, modifier: Modifier = Modifier) {
 
-    val lifecycleOwner = LocalLifecycleOwner.current //владерец жизненного цикла
+    val lifecycleOwner = LocalLifecycleOwner.current //владелец жизненного цикла, жизненный цикл камеры
     AndroidView(factory = {
         PreviewView(it).apply {
             this.controller = controller
