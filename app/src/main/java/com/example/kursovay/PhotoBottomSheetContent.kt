@@ -20,13 +20,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun PhotoBottomSheetContent(bitmaps: List<Bitmap>, modifier: Modifier = Modifier) {
+fun PhotoBottomSheetContent(bitmaps: List<Bitmap>, modifier: Modifier = Modifier) { // отбражение в галерее, список растовых изображений
     if(bitmaps.isEmpty()) {
         Box(modifier = modifier.padding(16.dp), contentAlignment = Alignment.Center) {
-            Text("Что б тут чет было, сделай фото)")
+            Text("Что б тут чет было, надо сделать фото)")
         }
     } else {
-        LazyVerticalStaggeredGrid(columns = StaggeredGridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalItemSpacing = 16.dp, contentPadding = PaddingValues(16.dp), modifier = modifier) {
+        LazyVerticalStaggeredGrid(columns = StaggeredGridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalItemSpacing = 16.dp, contentPadding = PaddingValues(16.dp), modifier = modifier) { // расположение в сетке фоток
             items(bitmaps) { bitmap ->
                 Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, modifier = Modifier.clip(RoundedCornerShape(10.dp)))
             }

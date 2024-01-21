@@ -49,113 +49,75 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.kursovay.ui.them.CameraXGuideTheme
+import com.example.kursovay.ui.them.CameraX
 import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : ComponentActivity() {
 
-    // zapis obekta s kameri
+    // запись объекта с камеры
     private var recording: Recording? = null
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!hasPermiss()) {
-            ActivityCompat.requestPermissions(this, CAMERAX_PERMISSIONS, 0)
+            ActivityCompat.requestPermissions(this, CAMERAX_PERMISSIONS, 0) // запрос разрешений, если их нет
         }
 
         setContent {
-            CameraXGuideTheme {
+            CameraX {
                 val scope = rememberCoroutineScope()
-                val scaffoldState = rememberBottomSheetScaffoldState()
+                val scaffoldState = rememberBottomSheetScaffoldState() // состояние нижнего листа
                 val controller = remember {
                     LifecycleCameraController(applicationContext).apply {
-                        setEnabledUseCases(
-                            CameraController.IMAGE_CAPTURE or
-                                    CameraController.VIDEO_CAPTURE
-                        )
+                        setEnabledUseCases(CameraController.IMAGE_CAPTURE or CameraController.VIDEO_CAPTURE) // варианты использования: захват изображения или захват видео
                     }
                 }
                 val viewModel = viewModel<MainViewModel>()
                 val bitmaps by viewModel.bitmaps.collectAsState()
 
-                BottomSheetScaffold(
-                    scaffoldState = scaffoldState,
-                    sheetPeekHeight = 0.dp,
-                    sheetContent = {
-                        PhotoBottomSheetContent(
-                            bitmaps = bitmaps,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        )
-                    }
-                ) { padding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                    ) {
-                        CameraPreview(
-                            controller = controller,
-                            modifier = Modifier
-                                .fillMaxSize()
-                        )
+                BottomSheetScaffold(scaffoldState = scaffoldState, sheetPeekHeight = 0.dp, sheetContent = {// нижний лист; содержимое листа,
+                        PhotoBottomSheetContent(bitmaps = bitmaps, modifier = Modifier.fillMaxWidth())
+                    })
+                { padding ->
+                    Box(modifier = Modifier.fillMaxSize().padding(padding)) // блок для нижнего листа
+                    {
+                        CameraPreview(controller = controller, modifier = Modifier.fillMaxSize()) // предварительный просмотр
 
-                        IconButton(
-                            onClick = {
+                        IconButton(onClick = {
                                 controller.cameraSelector =
                                     if (controller.cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
                                         CameraSelector.DEFAULT_FRONT_CAMERA
-                                    } else CameraSelector.DEFAULT_BACK_CAMERA
+                                    }
+                                    else CameraSelector.DEFAULT_BACK_CAMERA
                             },
-                            modifier = Modifier
-                                .offset(16.dp, 16.dp)
+                            modifier = Modifier.offset(16.dp, 16.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Cameraswitch,
-                                contentDescription = "Switch camera"
-                            )
+                            Icon(imageVector = Icons.Default.Cameraswitch, contentDescription = "Переключить камеру")
                         }
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.BottomCenter)
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
+                        Row(modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(16.dp), horizontalArrangement = Arrangement.SpaceAround) // кнопка сделеть фото
+                        {
+                            IconButton(onClick = { // галерея
+                                    scope.launch {  // открытие нижнего листа
                                         scaffoldState.bottomSheetState.expand()
                                     }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Photo,
-                                    contentDescription = "Open gallery"
-                                )
+                                })
+                            {
+                                Icon(imageVector = Icons.Default.Photo, contentDescription = "Галерея")
                             }
-                            IconButton(
-                                onClick = {
+                            IconButton(onClick = { // фото
                                     takePhoto(controller = controller, onPhotoTaken = viewModel::onTakePhoto)
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PhotoCamera,
-                                    contentDescription = "Сделать фото"
-                                )
+                                })
+                            {
+                                Icon(imageVector = Icons.Default.PhotoCamera, contentDescription = "Сделать фото")
                             }
-                            IconButton(
-                                onClick = {
+                            IconButton(onClick = { // видео
                                     recordVideo(controller = controller,)
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Videocam,
-                                    contentDescription = "Сделать видео"
-                                )
+                                })
+                            {
+                                Icon(imageVector = Icons.Default.Videocam, contentDescription = "Сделать видео")
                             }
                         }
                     }
@@ -165,31 +127,19 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private fun takePhoto(
-        controller: LifecycleCameraController,
-        onPhotoTaken: (Bitmap) -> Unit
-    ) {
+    private fun takePhoto(controller: LifecycleCameraController, onPhotoTaken: (Bitmap) -> Unit) { // делаем фото
         if(!hasPermiss()){
             return
         }
-        controller.takePicture(
-            ContextCompat.getMainExecutor(applicationContext),
-            object : ImageCapture.OnImageCapturedCallback() {
+        controller.takePicture(ContextCompat.getMainExecutor(applicationContext), object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
-                    super.onCaptureSuccess(image)
+                    super.onCaptureSuccess(image) //события на успешно сделанное фото
 
                     val matrix = Matrix().apply {
                         postRotate(image.imageInfo.rotationDegrees.toFloat())
+                        postScale(-1f, 1f)
                     }
-                    val rotatedBitmap = Bitmap.createBitmap(
-                        image.toBitmap(),
-                        0,
-                        0,
-                        image.width,
-                        image.height,
-                        matrix,
-                        true
-                    )
+                    val rotatedBitmap = Bitmap.createBitmap(image.toBitmap(), 0, 0, image.width, image.height, matrix, true)
 
                     onPhotoTaken(rotatedBitmap)
                 }
@@ -212,8 +162,8 @@ class MainActivity : ComponentActivity() {
         if(!hasPermiss()){
             return
         }
-        val outputFile = File(filesDir, "КОНЧЕНОЕ ВИДЕО СНБ")
-        recording = controller.startRecording( //параметры вывода файла. Конструктор берет файл, который мы хотим сохранить
+        val outputFile = File(filesDir, "Филин.mp4")
+        recording = controller.startRecording( //параметры вывода файла. Конструктор берет файл, который нужно сохранить
             FileOutputOptions.Builder(outputFile).build(),
             AudioConfig.create(true),
             ContextCompat.getMainExecutor(applicationContext),
@@ -228,26 +178,19 @@ class MainActivity : ComponentActivity() {
                         Toast.makeText(applicationContext, "Видео не записано", Toast.LENGTH_LONG).show()
                     }
                     else {
-                        Toast.makeText(applicationContext, "Записал БЛЯ", Toast.LENGTH_LONG).show()
+                        Toast.makeText(applicationContext, "Молодец, справился)", Toast.LENGTH_LONG).show()
                     }
                 }
 
             }
         }
     }
-    private fun hasPermiss(): Boolean {
-        return CAMERAX_PERMISSIONS.all {
-            ContextCompat.checkSelfPermission(
-                applicationContext,
-                it
-            ) == PackageManager.PERMISSION_GRANTED
+    private fun hasPermiss(): Boolean { // проверка, есть ли разрешения
+        return CAMERAX_PERMISSIONS.all { ContextCompat.checkSelfPermission(applicationContext, it) == PackageManager.PERMISSION_GRANTED // проверка отдального разрешения
         }
     }
 
-    companion object {
-        private val CAMERAX_PERMISSIONS = arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO,
-        )
+    companion object { // запрос на разрешения
+        private val CAMERAX_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO,)
     }
 }
